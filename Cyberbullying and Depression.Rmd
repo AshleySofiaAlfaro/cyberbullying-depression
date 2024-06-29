@@ -1,0 +1,218 @@
+---
+title: "Cyberbullying and Depression in Selangor, Malaysia"
+author: "Ashley Sofia Alfaro"
+date: "2024-06-28"
+output: html_document
+---
+
+### Import the Dataset
+
+This dataset was originally from Mendeley Data, and you will need to import the library haven to read the .sav file. 
+
+Also, the code may vary depending on where you downloaded the dataset.
+
+```{r}
+library(haven) # This library will allow you to read .sav files
+
+DepressionAnxietyStress <- read_sav("Datasets/DepressionAnxietyStress.sav")
+# DepressAnxietyStress <- read_sav(Insert/File/Path/Here)
+```
+
+
+### Subset the Dataset
+This will make it more manageable and take out the data that is not related to the research.
+
+```{r}
+library(dplyr)
+library(tidyverse)
+
+AllDepress <- DepressionAnxietyStress %>%
+  select(ID, CVTOTAL, DEPRESSLEVELS, CVPUBLICHUMILIATION, 
+         CVMALICE, CVUNWANTEDCONTACT, CVDECEPTION, SUMDEPRESS) %>%
+  filter(DEPRESSLEVELS!=1) ## Filtering out those who don't have depression ##
+```
+
+#### Remove Cells with NA
+If we don't remove the cells with NA, it will add a NULL section when we make our visuals.
+```{r}
+AllDepressSM <- AllDepress %>%
+  drop_na((DEPRESSLEVELS))
+rm(AllDepress)
+```
+
+### Creating a Violin Plot
+#### The Total Cyberbullying Victimization Scores Across Depression Levels
+
+```{r}
+AllDepressSM$DEPRESSLEVELS <- haven::as_factor(AllDepressSM$DEPRESSLEVELS) 
+
+AllDepressSM %>%
+  ggplot(aes(x=DEPRESSLEVELS,
+             y=CVTOTAL,
+             color=DEPRESSLEVELS,
+             fill=DEPRESSLEVELS))+
+  geom_violin(alpha=0.6, linewidth=0.8)+
+  geom_boxplot(alpha=1, linewidth=0.6, width=0.1, fill="white", color="black")+
+  ## The code below is customization, so you may change it to your liking! ##
+  theme_bw()+ 
+  scale_fill_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  scale_color_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  theme(text = element_text(family = "Century"),
+        plot.title = element_text(hjust=0.5, face="bold", size=22),
+        plot.caption = element_text(size=10),
+        plot.subtitle = element_text(hjust=0.5, size=14),
+        axis.title.y = element_text(face="bold", size=15),
+        axis.title.x = element_text(face="bold", size=15),
+        axis.text.x.bottom = element_text(size=12, color="black"),
+        axis.text.y.left = element_text(size=12, color="black"),
+        legend.title = element_text(size=12),
+        legend.text = element_text(size=12),
+        legend.position = "bottom",
+        legend.background = element_rect(linewidth=0.5, color="light gray"))+
+  labs(title="Impacts of Cyberbullying on Depression",
+       x="Depression Levels",
+       y="Cyberbullying Victimization Score",
+       fill="Depression Levels",
+       color="Depression Levels",
+       caption="
+NOTE: Scores came from a survey the participants had filled out.
+      The higher the score, the more instances of cyberbullying they have encountered.")
+```
+
+
+#### Violin Plots for the Cyberbullying Categories
+If you hadn't noticed, this code is quite repetitive. This code already makes the violin plot for Public Humiliation, but you will just need to change the 'y' to the other variables to make the rest of the plots!
+```{r}
+AllDepressSM %>%
+  ggplot(aes(x=DEPRESSLEVELS,
+             y=CVPUBLICHUMILIATION, ## Change this to CVMALICE, CVUNWANTEDCONTACT, CVDECEPTION to make the rest of the violin plots! Remember to change the labeling, too. ##
+             color=DEPRESSLEVELS,
+             fill=DEPRESSLEVELS))+
+  geom_violin(alpha=0.65, linewidth=0.8)+
+  geom_boxplot(alpha=1, linewidth=0.7, width=0.1, fill="white", color="black")+
+  theme_bw()+
+  scale_fill_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  scale_color_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  theme(text = element_text(family = "Century"),
+        plot.title = element_text(hjust=0.5, face="bold", size=22),
+        plot.subtitle = element_text(hjust=0.5, size=14),
+        axis.title.y = element_text(face="bold", size=15),
+        axis.title.x = element_text(face="bold", size=15),
+        axis.text.x.bottom = element_text(size=12, color="black"),
+        axis.text.y.left = element_text(size=12, color="black"),
+        legend.title = element_text(size=12),
+        legend.text = element_text(size=12),
+        legend.position = "bottom",
+        legend.background = element_rect(linewidth=0.5, color="light gray"))+
+  labs(title="Public Humiliation", ## Here is the labeling! ##
+       x="Depression Levels",
+       y="Public Humiliation Score", ## And over here! ##
+       fill="Depression Levels",
+       color="Depression Levels")
+```
+
+### K-Means Clustering Individuals with Similiar Cyberbullying Scores
+```{r}
+library(ggplot2)
+library(ggalt)
+
+# Select Relevant Columns and Scale the Data
+public_scaled <- scale(AllDepressSM[c("CVPUBLICHUMILIATION","CVMALICE")])
+
+set.seed(123)
+# Perform K-means Clustering on the Scaled Data
+kmeans_result <- kmeans(public_scaled, centers=4, nstart=25)
+
+# Create a data frame that includes the original data and the cluster assignments
+AllDepressSM$cluster <- factor(kmeans_result$cluster)
+
+# Plot the clustering results
+# PUBLIC + MALICE
+ggplot(AllDepressSM, aes(x=CVPUBLICHUMILIATION, y=CVMALICE, 
+                         color=cluster, shape=DEPRESSLEVELS))+
+  geom_point(size=3)+
+  geom_encircle(aes(group=cluster,fill=cluster),alpha=0.15,s_shape=1,expand=0.02)+
+  scale_shape_manual(values=c(19, 17, 15, 8))+
+  scale_fill_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  scale_color_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  theme_bw()+
+  labs(title="Clustering of Public Humiliation and Malice Scores",
+       x="Public Humiliation Score", y="Malice Score",
+       color="Cluster", fill="Cluster", shape="Depression Levels")+
+  theme(text = element_text(family = "Century"),
+        plot.title=element_text(size=20, face="bold", hjust=0.5),
+        axis.title.y = element_text(face="bold", size=16),
+        axis.title.x = element_text(face="bold", size=16),
+        axis.text.x.bottom = element_text(size=14, color="black"),
+        axis.text.y.left = element_text(size=14, color="black"),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position="bottom",
+        legend.background = element_rect(linewidth=0.4, color="light gray"))+
+  scale_x_continuous(n.breaks=8)+
+  scale_y_continuous(n.breaks=8)
+```
+
+```{r}
+# PUBLIC + UNWANTED CONTACT
+public2_scaled <- scale(AllDepressSM[c("CVPUBLICHUMILIATION", "CVUNWANTEDCONTACT")])
+kmeans_result2 <- kmeans(public2_scaled, centers=4, nstart=25)
+AllDepressSM$cluster <- factor(kmeans_result2$cluster)
+
+ggplot(AllDepressSM, aes(x=CVPUBLICHUMILIATION, y=CVUNWANTEDCONTACT, 
+                         color=cluster, shape=DEPRESSLEVELS))+
+  geom_point(size=3)+
+  geom_encircle(aes(group=cluster,fill=cluster),alpha=0.15,s_shape=1,expand=0.02)+
+  scale_shape_manual(values=c(19, 17, 15, 8))+
+  scale_fill_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  scale_color_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  theme_bw()+
+  labs(title="Clustering of Public Humiliation and Unwanted Contact Scores",
+       x="Public Humiliation Score", y="Unwanted Contact Score",
+       color="Cluster", fill="Cluster", shape="Depression Levels")+
+  theme(text = element_text(family = "Century"),
+        plot.title=element_text(size=20, face="bold", hjust=0.5),
+        axis.title.y = element_text(face="bold", size=16),
+        axis.title.x = element_text(face="bold", size=16),
+        axis.text.x.bottom = element_text(size=14, color="black"),
+        axis.text.y.left = element_text(size=14, color="black"),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position="bottom",
+        legend.background = element_rect(linewidth=0.4, color="light gray"))+
+  scale_x_continuous(n.breaks=8)+
+  scale_y_continuous(n.breaks=7)
+```
+
+```{r}
+# PUBLIC + DECEPTION
+public3_scaled <- scale(AllDepressSM[c("CVPUBLICHUMILIATION", "CVDECEPTION")])
+kmeans_result3 <- kmeans(public3_scaled, centers=4, nstart=25)
+AllDepressSM$cluster <- factor(kmeans_result3$cluster)
+
+ggplot(AllDepressSM, aes(x=CVPUBLICHUMILIATION, y=CVDECEPTION, 
+                         color=cluster, shape=DEPRESSLEVELS))+
+  geom_point(size=3)+
+  geom_encircle(aes(group=cluster,fill=cluster),alpha=0.15,s_shape=1,expand=0.02)+
+  scale_shape_manual(values=c(19, 17, 15, 8))+
+  scale_fill_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  scale_color_manual(values=c("#adb886", "#5f9f80", "#00797f", "#005076", "#082455"))+
+  theme_bw()+
+  labs(title="Clustering of Public Humiliation and Deception Scores",
+       x="Public Humiliation Score", y="Deception Score",
+       color="Cluster", fill="Cluster", shape="Depression Levels")+
+  theme(text = element_text(family = "Century"),
+        plot.title=element_text(size=20, face="bold", hjust=0.5),
+        axis.title.y = element_text(face="bold", size=16),
+        axis.title.x = element_text(face="bold", size=16),
+        axis.text.x.bottom = element_text(size=14, color="black"),
+        axis.text.y.left = element_text(size=14, color="black"),
+        legend.title = element_text(size=14),
+        legend.text = element_text(size=14),
+        legend.position="bottom",
+        legend.background = element_rect(linewidth=0.4, color="light gray"))+
+  scale_x_continuous(n.breaks=8)+
+  scale_y_continuous(n.breaks=8)
+```
+
+You would have to repeat this process for the other cyberbullying categories. 
