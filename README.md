@@ -34,7 +34,7 @@ My project explored the **impact of cyberbullying on depression among college st
 ---
 
 ## Deliverables
-- 📊 Research Poster (see `poster.pdf`)  
+- 📊 Research Poster (see `material` > `Presentation_Cyberbullying-Depression.pdf`)  
 - 🎥 [Presentation Video](https://drive.google.com/file/d/1ah557uDLsN1IanbKBJYXB4p59FL_bwmq/view?usp=sharing)  
 - 📂 Analysis Code and Scripts (this repo)  
 
